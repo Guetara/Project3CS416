@@ -88,22 +88,6 @@ public class Parser {
         return null;
     }
 
-    public HashMap<String, String> getRouterTable (String macAddress) {
-        HashMap<String, String> routerTable = new HashMap<>();
-        if (macAddress.equals("R1")) {
-            routerTable.put("net1", "127.0.0.1:7000");
-            routerTable.put("net2", "127.0.0.1:6000");
-            routerTable.put("net3", "net2.R2");
-        }
-        else {
-            routerTable.put("net1", "net2.R1");
-            routerTable.put("net2", "127.0.0.1:5000");
-            routerTable.put("net3", "127.0.0.1:8000");
-        }
-
-        return routerTable;
-    }
-
     public String getGateway(String macAddress) throws FileNotFoundException {
         Scanner fileReader = new Scanner(config);
 

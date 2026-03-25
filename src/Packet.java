@@ -1,4 +1,5 @@
 public class Packet {
+    private String flag;
     private String data;
     private String destinationMacAddress;
     private String sourceMacAddress;
@@ -31,6 +32,8 @@ public class Packet {
 
     public String getDestinationIPAddress() { return destinationIPAddress; }
 
+    public String getFlag() { return flag; }
+
     public void setDestinationMacAddress(String destinationMacAddress) { this.destinationMacAddress = destinationMacAddress; }
 
     public void setSourceMacAddress(String sourceMacAddress) { this.sourceMacAddress = sourceMacAddress;}
@@ -38,6 +41,6 @@ public class Packet {
     public void setSourceIPAddress(String sourceIPAddress) { this.sourceIPAddress = sourceIPAddress; }
 
     public String createFrameString() {
-        return sourceMacAddress + ":" + destinationMacAddress + ":" + sourceIPAddress + ":" + destinationIPAddress + ":" + data;
+        return flag + ":" + sourceMacAddress + ":" + destinationMacAddress + ":" + sourceIPAddress + ":" + destinationIPAddress + ":" + data;
     }
 }

@@ -33,7 +33,7 @@ public class Router {
         String rightSubnet = rightVirtualIP.split("\\.")[0];
 
         HashMap<String, Port> neighbors = parser.getNeighbors(macAddress);
-        HashMap<String, String> routerTable = parser.getRouterTable(macAddress);
+        HashMap<String, DistanceVector> routerTable = getInitialRouterTable(neighbors);
 
         printRouterTable(routerTable);
 
@@ -152,5 +152,9 @@ public class Router {
         System.out.println("  Src IP : " + p.getSourceIPAddress());
         System.out.println("  Dst IP : " + p.getDestinationIPAddress());
         System.out.println("  Data   : " + p.getData());
+    }
+
+    public static HashMap<String, Port> getInitialRouterTable(HashMap<String, Port> neighbors) {
+
     }
 }
