@@ -133,4 +133,21 @@ public class Parser {
 
         return initialRouterTable;
     }
+
+    public String getLinkSubnet (String mac1, String mac2) throws FileNotFoundException {
+        Scanner fileReader = new Scanner(config);
+        String subnet = "";
+
+        while (fileReader.hasNextLine()) {
+            String line = fileReader.nextLine();
+            if (line.length() > 4) {
+                String link = line.substring(0, 4);
+                if (link.equals(mac1 + ":" + mac2) || link.equals(mac2 + ":" + mac1)) {
+                    String[] splitLine = line.split(":");
+                    subnet = splitLine[2];
+                }
+            }
+        }
+        return subnet;
+    }
 }

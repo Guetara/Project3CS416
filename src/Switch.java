@@ -7,7 +7,7 @@ public class Switch {
     public static void main(String[] args) throws Exception, FileNotFoundException {
         String macAddress = args[0];
         System.out.println("Mac Address: " + macAddress);
-        File config = new File("Project 2/src/config.txt");
+        File config = new File("src/config.txt");
         Parser parser = new Parser(config);
         Port switchPort = parser.parseMac(macAddress);
         HashMap<String, Port> neighbors = parser.getNeighbors(macAddress);

@@ -7,13 +7,14 @@ public class Packet {
     private String destinationIPAddress;
 
     public Packet(String rawFrame) {
-        String[] splitFrame = rawFrame.split(":",5);
+        String[] splitFrame = rawFrame.split(":");
 
-        sourceMacAddress = splitFrame[0];
-        destinationMacAddress = splitFrame[1];
-        sourceIPAddress = splitFrame[2];
-        destinationIPAddress = splitFrame[3];
-        data = splitFrame[4];
+        flag = splitFrame[0];
+        sourceMacAddress = splitFrame[1];
+        destinationMacAddress = splitFrame[2];
+        sourceIPAddress = splitFrame[3];
+        destinationIPAddress = splitFrame[4];
+        data = splitFrame[5];
     }
 
     public String getDestinationMacAddress() {

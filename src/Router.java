@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -38,6 +39,10 @@ public class Router {
         printRouterTable(routerTable);
 
         DatagramSocket socket = new DatagramSocket(udpPort);
+
+        //Send initial distance vector table to neighbors
+        sendDistanceVectors(routerTable, socket, neighbors, macAddress, parser);
+
         DatagramPacket incoming = new DatagramPacket(new byte[1024], 1024);
 
         while (true) {
@@ -102,18 +107,6 @@ public class Router {
                     continue;
                 }
 
-                if (destSubnet.equals(leftSubnet)) {
-                    packet.setSourceIPAddress(leftVirtualIP);
-                } else if (destSubnet.equals(rightSubnet)) {
-                    packet.setSourceIPAddress(rightVirtualIP);
-                } else {
-                    if (leftSubnet.equals("net2")) {
-                        packet.setSourceIPAddress(leftVirtualIP);
-                    } else {
-                        packet.setSourceIPAddress(rightVirtualIP);
-                    }
-                }
-
                 packet.setSourceMacAddress(macAddress);
                 packet.setDestinationMacAddress(newDestMac);
 
@@ -152,6 +145,30 @@ public class Router {
         System.out.println("  Src IP : " + p.getSourceIPAddress());
         System.out.println("  Dst IP : " + p.getDestinationIPAddress());
         System.out.println("  Data   : " + p.getData());
+    }
+
+    public static void sendDistanceVectors(HashMap<String, DistanceVector> routerTable, DatagramSocket socket, HashMap<String, Port> neighbors, String srcMac, Parser parser) throws IOException {
+        for (String destMac : neighbors.keySet()) {
+            if (destMac.charAt(0) == 'R') {
+                Port outgoingPort = neighbors.get(destMac);
+                StringBuilder data = new StringBuilder();
+
+                for (String subnet : routerTable.keySet()) {
+                    data.append(subnet).append(" ").append(routerTable.get(subnet).getDistance()).append(",");
+                }
+                String subnet = parser.getLinkSubnet(srcMac, destMac);
+                String packet = "1:" + srcMac + ":" + destMac + ":" + subnet + "." + srcMac + ":" + subnet + "." + destMac + ":" + data;
+                byte[] outBytes = packet.getBytes();
+                DatagramPacket outgoingPacket =
+                        new DatagramPacket(
+                                outBytes,
+                                outBytes.length,
+                                outgoingPort.getIpAddress(),
+                                outgoingPort.getUdpPort()
+                        );
+                socket.send(outgoingPacket);
+            }
+        }
     }
 
 }

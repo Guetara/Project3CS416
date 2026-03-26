@@ -64,7 +64,7 @@ public class Host {
                 String virtualDstIP;
                 String gatewayMac = null;
                 try {
-                    Parser parser = new Parser(new File("Project 2/src/config.txt"));
+                    Parser parser = new Parser(new File("src/config.txt"));
                     virtualSrcIP = parser.getVirtualIP(this.macAddress);
                     virtualDstIP = parser.getVirtualIP(destinationMac);
                     if (!sameSubnet(virtualSrcIP, virtualDstIP)) {
