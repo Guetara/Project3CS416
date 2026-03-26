@@ -17,7 +17,7 @@ public class Router {
         String macAddress = args[0];
         System.out.println("Router started with MAC: " + macAddress);
 
-        File config = new File("Project 2/src/config.txt");
+        File config = new File("src/config.txt");
         Parser parser = new Parser(config);
 
         String routerLine = parser.parseHostOrRouter(macAddress);
@@ -33,7 +33,7 @@ public class Router {
         String rightSubnet = rightVirtualIP.split("\\.")[0];
 
         HashMap<String, Port> neighbors = parser.getNeighbors(macAddress);
-        HashMap<String, DistanceVector> routerTable = getInitialRouterTable(neighbors);
+        HashMap<String, DistanceVector> routerTable = parser.getInitialRouterTable(macAddress);
 
         printRouterTable(routerTable);
 
@@ -64,8 +64,8 @@ public class Router {
                 System.out.println("Dropping packet - source and destination in same subnet (" + srcSubnet + ")");
             }
             else {
-
-                String routeEntry = routerTable.get(destSubnet);
+                DistanceVector dv = routerTable.get(destSubnet);
+                String routeEntry = dv.getNextHop();
 
                 if (routeEntry == null) {
                     System.out.println("No route to subnet: " + destSubnet);
@@ -135,13 +135,13 @@ public class Router {
         }
     }
 
-    public static void printRouterTable(HashMap<String, String> routerTable) {
+    public static void printRouterTable(HashMap<String, DistanceVector> routerTable) {
 
         System.out.println("\nRouting Table:");
-        System.out.println("Subnet\tNext Hop / Exit Port");
+        System.out.println("Subnet\tNext Hop\t\t\tDistance");
 
         for (String subnet : routerTable.keySet()) {
-            System.out.println(subnet + "\t" + routerTable.get(subnet));
+            System.out.println(subnet + "\t" + routerTable.get(subnet).getNextHop() + "\t\t" + routerTable.get(subnet).getDistance());
         }
     }
 
@@ -154,7 +154,4 @@ public class Router {
         System.out.println("  Data   : " + p.getData());
     }
 
-    public static HashMap<String, Port> getInitialRouterTable(HashMap<String, Port> neighbors) {
-
-    }
 }

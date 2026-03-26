@@ -1,7 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.net.InetAddress;
@@ -105,5 +104,33 @@ public class Parser {
         }
         fileReader.close();
         return null;
+    }
+
+    public HashMap<String, DistanceVector> getInitialRouterTable (String macAddress) throws FileNotFoundException, UnknownHostException {
+        Scanner fileReader = new Scanner(config);
+        boolean linksSection = false;
+        HashMap<String, DistanceVector> initialRouterTable = new HashMap<>();
+
+        while(fileReader.hasNextLine()) {
+            String line = fileReader.nextLine();
+            if (linksSection) {
+                String[] macAddressesAndSubnet = line.split(":");
+                if (macAddressesAndSubnet[0].equals(macAddress)) {
+                    Port neighborPort = parseMac(macAddressesAndSubnet[1]);
+                    DistanceVector distanceVector = new DistanceVector(1, neighborPort.getFullPort());
+                    initialRouterTable.put(macAddressesAndSubnet[2], distanceVector);
+                }
+                else if (macAddressesAndSubnet[1].equals(macAddress)) {
+                    Port neighborPort = parseMac(macAddressesAndSubnet[0]);
+                    DistanceVector distanceVector = new DistanceVector(1, neighborPort.getFullPort());
+                    initialRouterTable.put(macAddressesAndSubnet[2], distanceVector);
+                }
+            }
+            if (line.equals("Links")) {
+                linksSection = true;
+            }
+        }
+
+        return initialRouterTable;
     }
 }
