@@ -27,12 +27,6 @@ public class Router {
         int udpPort = Integer.parseInt(parts[1]);
         InetAddress realIP = InetAddress.getByName(parts[2]);
 
-        // Collect all subnets this router is directly connected to
-        String[] connectedSubnets = new String[parts.length - 3];
-        for (int i = 3; i < parts.length; i++) {
-            connectedSubnets[i - 3] = parts[i].split("\\.")[0];
-        }
-
         HashMap<String, Port> neighbors = parser.getNeighbors(macAddress);
         HashMap<String, DistanceVector> routerTable = parser.getInitialRouterTable(macAddress);
 
@@ -101,10 +95,13 @@ public class Router {
                             String full = p.getIpAddress().getHostAddress() + ":" + p.getUdpPort();
 
                             if (full.equals(routeEntry)) {
-                                // If neighbor is a host (destination), set dest MAC to the host
-                                // If neighbor is a router/switch, set dest MAC to the neighbor
-                                if (neighborMac.charAt(0) == 'S' || neighborMac.charAt(0) == 'R') {
+                                // If neighbor is a switch, send to the final destination's MAC
+                                // If neighbor is a router, send to the router's MAC
+                                // If neighbor is a host, send to the destination host's MAC
+                                if (neighborMac.charAt(0) == 'S') {
                                     newDestMac = destIP.split("\\.")[1];
+                                } else if (neighborMac.charAt(0) == 'R') {
+                                    newDestMac = neighborMac;
                                 } else {
                                     newDestMac = destIP.split("\\.")[1];
                                 }

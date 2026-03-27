@@ -22,5 +22,5 @@ public class Port {
         return ipAddress;
     }
 
-    public String getFullPort() { return Integer.toString(udpPort) + ":" + ipAddress.getHostAddress();}
+    public String getFullPort() { return ipAddress.getHostAddress() + ":" + Integer.toString(udpPort);}
 }

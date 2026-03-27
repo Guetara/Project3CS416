@@ -129,7 +129,7 @@ public class Host {
         }
 
         String macAddress = args[0];
-        File config = new File("Project 2/src/config.txt");
+        File config = new File("src/config.txt");
         Host host = new Host(macAddress, config);
         host.start();
 
