@@ -79,7 +79,7 @@ public class Host {
                 }
 
                 String frameDstMac = (gatewayMac != null) ? gatewayMac : destinationMac;
-                String frame = this.macAddress + ":" + frameDstMac + ":" + virtualSrcIP + ":" + virtualDstIP + ":" + data;
+                String frame = "0:" + this.macAddress + ":" + frameDstMac + ":" + virtualSrcIP + ":" + virtualDstIP + ":" + data;
                 Packet packet = new Packet(frame);
                 System.out.println("[" + macAddress + "] Sending:");
                 System.out.println("  Src: " + packet.getSourceMacAddress());

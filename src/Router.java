@@ -27,11 +27,11 @@ public class Router {
         int udpPort = Integer.parseInt(parts[1]);
         InetAddress realIP = InetAddress.getByName(parts[2]);
 
-        String leftVirtualIP = parts[3];
-        String rightVirtualIP = parts[4];
-
-        String leftSubnet = leftVirtualIP.split("\\.")[0];
-        String rightSubnet = rightVirtualIP.split("\\.")[0];
+        // Collect all subnets this router is directly connected to
+        String[] connectedSubnets = new String[parts.length - 3];
+        for (int i = 3; i < parts.length; i++) {
+            connectedSubnets[i - 3] = parts[i].split("\\.")[0];
+        }
 
         HashMap<String, Port> neighbors = parser.getNeighbors(macAddress);
         HashMap<String, DistanceVector> routerTable = parser.getInitialRouterTable(macAddress);
@@ -40,7 +40,7 @@ public class Router {
 
         DatagramSocket socket = new DatagramSocket(udpPort);
 
-        //Send initial distance vector table to neighbors
+        // Send initial distance vector table to neighbors
         sendDistanceVectors(routerTable, socket, neighbors, macAddress, parser);
 
         DatagramPacket incoming = new DatagramPacket(new byte[1024], 1024);
@@ -60,72 +60,143 @@ public class Router {
             System.out.println("\n[ROUTER " + macAddress + "] RECEIVED:");
             printPacket(packet);
 
-            String srcIP = packet.getSourceIPAddress();
-            String destIP = packet.getDestinationIPAddress();
-            String srcSubnet = srcIP.split("\\.")[0];
-            String destSubnet = destIP.split("\\.")[0];
+            // Check if this is a distance vector update (flag = "1") or a data packet (flag = "0")
+            if (packet.getFlag().equals("1")) {
+                // Process distance vector update
+                boolean tableChanged = processDistanceVector(packet, routerTable, neighbors);
 
-            if (srcSubnet.equals(destSubnet)) {
-                System.out.println("Dropping packet - source and destination in same subnet (" + srcSubnet + ")");
-            }
-            else {
-                DistanceVector dv = routerTable.get(destSubnet);
-                String routeEntry = dv.getNextHop();
-
-                if (routeEntry == null) {
-                    System.out.println("No route to subnet: " + destSubnet);
-                    continue;
+                if (tableChanged) {
+                    System.out.println("[ROUTER " + macAddress + "] Routing table updated!");
+                    printRouterTable(routerTable);
+                    // Send updated DV to all neighbors
+                    sendDistanceVectors(routerTable, socket, neighbors, macAddress, parser);
                 }
+            } else {
+                // Data packet — forward it
+                String srcIP = packet.getSourceIPAddress();
+                String destIP = packet.getDestinationIPAddress();
+                String srcSubnet = srcIP.split("\\.")[0];
+                String destSubnet = destIP.split("\\.")[0];
 
-                String newDestMac = null;
-                Port outgoingPort = null;
-
-                if (routeEntry.contains(":")) {
-
-                    for (String neighborMac : neighbors.keySet()) {
-                        Port p = neighbors.get(neighborMac);
-
-                        String full =
-                                p.getIpAddress().getHostAddress() +
-                                        ":" +
-                                        p.getUdpPort();
-
-                        if (full.equals(routeEntry)) {
-                            newDestMac = destIP.split("\\.")[1];
-                            outgoingPort = p;
-                            break;
-                        }
-                    }
+                if (srcSubnet.equals(destSubnet)) {
+                    System.out.println("Dropping packet - source and destination in same subnet (" + srcSubnet + ")");
                 } else {
-                    String nextHopMac = routeEntry.split("\\.")[1];
-                    newDestMac = nextHopMac;
-                    outgoingPort = neighbors.get(nextHopMac);
+                    DistanceVector dv = routerTable.get(destSubnet);
+
+                    if (dv == null) {
+                        System.out.println("No route to subnet: " + destSubnet);
+                        continue;
+                    }
+
+                    String routeEntry = dv.getNextHop();
+
+                    String newDestMac = null;
+                    Port outgoingPort = null;
+
+                    if (routeEntry.contains(":")) {
+                        // Next hop is in IP:port format (directly connected neighbor)
+                        for (String neighborMac : neighbors.keySet()) {
+                            Port p = neighbors.get(neighborMac);
+                            String full = p.getIpAddress().getHostAddress() + ":" + p.getUdpPort();
+
+                            if (full.equals(routeEntry)) {
+                                // If neighbor is a host (destination), set dest MAC to the host
+                                // If neighbor is a router/switch, set dest MAC to the neighbor
+                                if (neighborMac.charAt(0) == 'S' || neighborMac.charAt(0) == 'R') {
+                                    newDestMac = destIP.split("\\.")[1];
+                                } else {
+                                    newDestMac = destIP.split("\\.")[1];
+                                }
+                                outgoingPort = p;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Next hop is in subnet.MAC format (learned via DV)
+                        String nextHopMac = routeEntry.split("\\.")[1];
+                        newDestMac = nextHopMac;
+                        outgoingPort = neighbors.get(nextHopMac);
+                    }
+
+                    if (outgoingPort == null) {
+                        System.out.println("Outgoing port not found.");
+                        continue;
+                    }
+
+                    packet.setSourceMacAddress(macAddress);
+                    packet.setDestinationMacAddress(newDestMac);
+
+                    System.out.println("[ROUTER " + macAddress + "] FORWARDING:");
+                    printPacket(packet);
+
+                    byte[] outBytes = packet.createFrameString().getBytes();
+
+                    DatagramPacket outgoingPacket =
+                            new DatagramPacket(
+                                    outBytes,
+                                    outBytes.length,
+                                    outgoingPort.getIpAddress(),
+                                    outgoingPort.getUdpPort()
+                            );
+
+                    socket.send(outgoingPacket);
                 }
-
-                if (outgoingPort == null) {
-                    System.out.println("Outgoing port not found.");
-                    continue;
-                }
-
-                packet.setSourceMacAddress(macAddress);
-                packet.setDestinationMacAddress(newDestMac);
-
-                System.out.println("[ROUTER " + macAddress + "] FORWARDING:");
-                printPacket(packet);
-
-                byte[] outBytes = packet.createFrameString().getBytes();
-
-                DatagramPacket outgoingPacket =
-                        new DatagramPacket(
-                                outBytes,
-                                outBytes.length,
-                                outgoingPort.getIpAddress(),
-                                outgoingPort.getUdpPort()
-                        );
-
-                socket.send(outgoingPacket);
             }
         }
+    }
+
+    /**
+     * Process an incoming distance vector update packet.
+     * Returns true if the routing table was changed.
+     */
+    public static boolean processDistanceVector(Packet packet, HashMap<String, DistanceVector> routerTable, HashMap<String, Port> neighbors) {
+        boolean changed = false;
+        String senderMac = packet.getSourceMacAddress();
+        String dvData = packet.getData();
+
+        // DV data format: "subnet1 dist1,subnet2 dist2,..."
+        String[] entries = dvData.split(",");
+
+        for (String entry : entries) {
+            entry = entry.trim();
+            if (entry.isEmpty()) continue;
+
+            String[] subnetAndDist = entry.split(" ");
+            if (subnetAndDist.length < 2) continue;
+
+            String subnet = subnetAndDist[0];
+            int advertisedDistance;
+            try {
+                advertisedDistance = Integer.parseInt(subnetAndDist[1]);
+            } catch (NumberFormatException e) {
+                continue;
+            }
+
+            int newDistance = advertisedDistance + 1;
+
+            // Build the next hop string: use the sender's port info
+            Port senderPort = neighbors.get(senderMac);
+            if (senderPort == null) continue;
+            String nextHop = senderPort.getIpAddress().getHostAddress() + ":" + senderPort.getUdpPort();
+
+            if (!routerTable.containsKey(subnet)) {
+                // New subnet discovered
+                routerTable.put(subnet, new DistanceVector(newDistance, nextHop));
+                changed = true;
+                System.out.println("  Learned new route: " + subnet + " via " + senderMac + " distance " + newDistance);
+            } else {
+                DistanceVector current = routerTable.get(subnet);
+                if (newDistance < current.getDistance()) {
+                    // Found a shorter path
+                    current.setDistance(newDistance);
+                    current.setNextHop(nextHop);
+                    changed = true;
+                    System.out.println("  Updated route: " + subnet + " via " + senderMac + " distance " + newDistance);
+                }
+            }
+        }
+
+        return changed;
     }
 
     public static void printRouterTable(HashMap<String, DistanceVector> routerTable) {
@@ -140,6 +211,7 @@ public class Router {
 
     public static void printPacket(Packet p) {
 
+        System.out.println("  Flag   : " + p.getFlag());
         System.out.println("  Src MAC: " + p.getSourceMacAddress());
         System.out.println("  Dst MAC: " + p.getDestinationMacAddress());
         System.out.println("  Src IP : " + p.getSourceIPAddress());
@@ -167,6 +239,7 @@ public class Router {
                                 outgoingPort.getUdpPort()
                         );
                 socket.send(outgoingPacket);
+                System.out.println("[ROUTER " + srcMac + "] Sent DV to " + destMac);
             }
         }
     }

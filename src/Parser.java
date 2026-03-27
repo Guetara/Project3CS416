@@ -140,10 +140,10 @@ public class Parser {
 
         while (fileReader.hasNextLine()) {
             String line = fileReader.nextLine();
-            if (line.length() > 4) {
-                String link = line.substring(0, 4);
-                if (link.equals(mac1 + ":" + mac2) || link.equals(mac2 + ":" + mac1)) {
-                    String[] splitLine = line.split(":");
+            String[] splitLine = line.split(":");
+            if (splitLine.length >= 3) {
+                if ((splitLine[0].equals(mac1) && splitLine[1].equals(mac2)) ||
+                    (splitLine[0].equals(mac2) && splitLine[1].equals(mac1))) {
                     subnet = splitLine[2];
                 }
             }
