@@ -61,7 +61,8 @@ public class Router {
             printPacket(packet);
 
             // Check if this is a distance vector update (flag = "1") or a data packet (flag = "0")
-            if (packet.getFlag().equals("1")) {
+            String flag = packet.getFlag();
+            if ("1".equals(flag)) {
                 // Process distance vector update
                 boolean tableChanged = processDistanceVector(packet, routerTable, neighbors);
 
